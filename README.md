@@ -1,5 +1,7 @@
 # Fiend
 
+<a href="https://opencode.ai"><picture><source media="(prefers-color-scheme: dark)" srcset="https://opencode.ai/brand/badges/opencode-built-with-g-dark-20.svg"><img alt="Built with OpenCode" src="https://opencode.ai/brand/badges/opencode-built-with-g-light-20.svg" height="20" /></picture></a>
+
 A live 3D asset workshop for you and your agents. Build with constrained modeling tools, refine together in the Three.js editor, and export reusable GLB assets into a larger game.
 
 - **Editor:** https://anoma.ly/labs/fiend
