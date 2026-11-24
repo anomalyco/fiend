@@ -14,6 +14,24 @@ const transform = {
   rotation: vector.describe("Euler rotation in radians, XYZ order").optional(),
   scale: vector.optional(),
 };
+// Shapes need one, two or three dimensions; requiring three forced callers to
+// invent a dummy value for a torus tube or a plane height.
+const size = z.array(z.number().finite()).min(1).max(3)
+  .describe("Box: width/height/depth. Cylinder: radiusTop/radiusBottom/height. Cone: radius/height. Sphere/icosahedron/dodecahedron: radius. Torus and torus knot: radius/tube. Plane: width/height. Capsule: radius/length. Supply only the values the shape uses; a no-op third value is not required.");
+// Dimensions each primitive actually reads, in order.
+const SIZE_ARITY: Record<string, number> = {
+  box: 3, cylinder: 3, cone: 2, sphere: 1, icosahedron: 1, dodecahedron: 1,
+  torus: 2, torus_knot: 2, plane: 2, capsule: 2,
+};
+function checkedSize(geometry: string, input?: number[]): [number, number, number] {
+  const arity = SIZE_ARITY[geometry] ?? 3;
+  const values = input ? [...input] : new Array(arity).fill(1);
+  if (values.length < arity) throw new SceneError(`${geometry} needs ${arity} size value${arity === 1 ? "" : "s"}`);
+  const used = values.slice(0, arity);
+  if (used.some((value) => !(value > 0))) throw new SceneError(`Geometry dimensions must be greater than 0`);
+  if (used.some((value) => value > 10000)) throw new SceneError("Geometry dimensions must be between 0 and 10,000");
+  return [values[0]!, values[1] ?? 1, values[2] ?? 1];
+}
 const material = z.object({
   color: color.optional(),
   metalness: z.number().min(0).max(1).optional(),
@@ -27,7 +45,7 @@ export const operation = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("add_mesh"), name,
     geometry: z.enum(["box", "sphere", "cylinder", "cone", "torus", "plane", "icosahedron", "capsule", "torus_knot", "dodecahedron"]),
-    size: vector.describe("Box: width/height/depth. Sphere/icosahedron: radius. Cylinder: radiusTop/radiusBottom/height. Cone: radius/height. Torus: radius/tube. Plane: width/height.").optional(),
+    size: size.optional(),
     material: material.optional(), parent: z.string().optional(), ...transform,
   }),
   z.object({ type: z.literal("add_extrusion"), name, points: z.array(z.tuple([z.number().finite(), z.number().finite()])).min(3).max(128).describe("Closed 2D XY outline; do not repeat the first point. Extrudes along +Z."), depth: z.number().positive().max(1000).default(0.5), bevel: z.number().min(0).max(10).default(0), material: material.optional(), parent: z.string().optional(), ...transform }),
@@ -216,8 +234,7 @@ export function editDocument(original: Document, operations: z.infer<typeof oper
         // arrays made tiny tool inputs expand into hundreds of kilobytes of JSON.
         object = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ color: "#b3ef72", roughness: 0.5 }));
       } else {
-        const [a, b, c] = op.size ?? [1, 1, 1];
-        if (a <= 0 || b <= 0 || c <= 0 || Math.max(a, b, c) > 10000) throw new SceneError("Geometry dimensions must be between 0 and 10,000");
+        const [a, b, c] = checkedSize(op.geometry, op.size);
         const geometry = op.geometry === "box" ? new THREE.BoxGeometry(a, b, c)
           : op.geometry === "sphere" ? new THREE.SphereGeometry(a, 32, 20)
           : op.geometry === "cylinder" ? new THREE.CylinderGeometry(a, b, c, 32)
