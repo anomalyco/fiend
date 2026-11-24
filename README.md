@@ -63,9 +63,37 @@ Only edit-link holders can leave or resolve feedback. Public-link viewers can re
 | Feedback | `get_feedback`, `resolve_feedback` |
 | Export | `export_asset` (GLB), `export_scene` (Three.js editor JSON) |
 
-Primitive meshes: box, sphere, cylinder, cone, torus, plane, icosahedron, capsule, torus knot and dodecahedron. `size` has shape-specific semantics documented in the tool schema. Use object scale for subsequent dimension changes. `add_lathe` exposes a segment count for low-poly profiles.
+Primitive meshes: box, sphere, cylinder, cone, torus, plane, icosahedron, capsule, torus knot and dodecahedron. `size` has shape-specific semantics documented in the tool schema, and takes only the values that shape uses: one for a sphere or icosahedron, two for a cone, plane, torus, torus knot or capsule, three for a box or cylinder. Use object scale for subsequent dimension changes. `add_lathe` exposes a segment count for low-poly profiles.
 
 `capture_scene` renders the saved camera without needing a connected viewer. It returns both an image and named object positions in pixel coordinates, plus world-space bounds. `inFrame` describes a projected center, not an occlusion test. Browser editor helper overlays are not included.
+
+#### Batch operation names
+
+`edit_scene` takes up to 100 operations and applies them atomically. The batch
+`type` is not the tool name: the standalone tools are generated from the same
+shapes, so the two vocabularies differ. Each entry also accepts the shared
+`position`, `rotation`, `scale` and `material` fields where the shape allows them.
+
+| Tool | `type` | Required |
+| --- | --- | --- |
+| `add_mesh` | `add_mesh` | `name`, `geometry` |
+| `add_extrusion` | `add_extrusion` | `name`, `points` (closed 2D outline) |
+| `add_lathe` | `add_lathe` | `name`, `points` (`[radius, height]` pairs) |
+| `add_tube` | `add_tube` | `name`, `points` (3D centerline) |
+| `add_group` | `add_group` | `name` |
+| `add_light` | `add_light` | `name`, `kind` |
+| `update_object` | `transform` | `object` |
+| `set_material` | `material` | `object`, `material` |
+| `set_light` | `light` | `object` |
+| `duplicate_object` | `duplicate` | `object`, `name` |
+| `frame_object` | `frame` | — (`object` defaults to `Scene`) |
+| `rename_object` | `rename` | `object`, `name` |
+| `remove_object` | `remove` | `object` |
+| `reparent_object` | `reparent` | `object`, `parent` |
+| `set_background` | `background` | `color` |
+| `set_camera` | `camera` | `position`, `target` |
+
+Later operations in a batch can refer to names created earlier in the same batch.
 
 ### Import into a game
 
